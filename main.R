@@ -59,10 +59,21 @@ View(data_summary)
 
 
 last_year <- Sys.Date() - lubridate::years(1)
-
+annotate
 
 
 data %>% filter(
   date >= last_year
 ) %>% ggplot(data = .) +
-  geom_line(mapping = aes(x = date, y = close, color = symbol))
+  geom_line(mapping = aes(x = date, y = close, color = symbol)) +
+  theme_minimal()
+
+
+data %>% filter(
+  date >= last_year
+) %>% ggplot(data = .) +
+  geom_line(mapping = aes(x = date, y = close, color = symbol)) +
+  #annotate(geom = "text", ) +
+  theme_minimal() +
+  facet_wrap(~ symbol, scales = "free_y")
+
