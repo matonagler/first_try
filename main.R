@@ -15,7 +15,8 @@ library(tidyr)
 library(ggplot2)
 library(zoo)
 library(purrr)
-#library(lubridate)
+library(stringr)
+library(lubridate)
 
 
 # params -----------------------------------------------------------------------
@@ -129,29 +130,84 @@ data_wide_open <- data_wide_open %>% bind_cols(
 
 
 
+
+
+
 # plots ------------------------------------------------------------------------
 last_year <- Sys.Date() - lubridate::years(1)
 annotate
 colnames(data)
 
-data %>% filter(
+data %>% dplyr::filter(
   date >= last_year
-) %>% ggplot(data = .) +
-  geom_line(mapping = aes(x = date, y = open, color = symbol)) +
-  theme_minimal()
+) %>% ggplot2::ggplot(data = .) +
+  ggplot2::geom_line(mapping = ggplot2::aes(x = date, y = open, color = symbol)) +
+  ggplot2::theme_minimal()
 
 
-data %>% filter(
+data %>% dplyr::filter(
   date >= last_year
-) %>% ggplot(data = .) +
-  geom_line(mapping = aes(x = date, y = open, color = symbol)) +
+) %>% ggplot2::ggplot(data = .) +
+  ggplot2::geom_line(mapping = ggplot2::aes(x = date, y = open, color = symbol)) +
   #annotate(geom = "text", ) +
   theme_minimal() +
   facet_wrap(~ symbol, scales = "free_y")
 
 
-data %>% filter(
+data %>% dplyr::filter(
   date >= last_year
-) %>% ggplot(data = .) +
-  geom_line(mapping = aes(x = date, y = volume, color = symbol)) +
-  theme_minimal()
+) %>% ggplot2::ggplot(data = .) +
+  ggplot2::geom_line(mapping = ggplot2::aes(x = date, y = volume, color = symbol)) +
+  ggplot2::theme_minimal()
+
+colnames(data_wide_open)
+
+colnames(data_wide_open)[-1]
+
+# pivot opens to long
+data_long_open <- data_wide_open %>% tidyr::pivot_longer(
+  cols = -date,
+  names_to = "variable",
+  values_to = "value"
+) %>% dplyr::mutate(
+  symbol = stringr::str_split(
+    variable,
+    pattern = "_"
+  ) %>% purrr::map_chr(~ .x[1])
+)
+
+
+# plot
+
+data_long_open %>% dplyr::filter(
+  symbol == "INTC"
+) %>% ggplot2::ggplot() +
+  ggplot2::geom_line(
+    mapping = ggplot2::aes(
+      x = date,
+      y = value,
+      color = variable
+    )
+  )
+
+
+
+data_wide_open %>% head()
+
+data_wide_open %>% ggplot2::ggplot() +
+  ggplot2::geom_point(
+    mapping = ggplot2::aes(
+      x = LHA.DE,
+      y = NVDA
+    )
+  )
+
+#sum(is.na(data_wide_open$NVDA))
+
+data_wide_open %>% ggplot2::ggplot() +
+  ggplot2::geom_histogram(
+    mapping = ggplot2::aes(
+      x = NVDA
+    ),
+    binwidth = 50
+  )
