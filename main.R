@@ -4,7 +4,6 @@
 #
 #
 #
-#
 ################################################################################
 
 
@@ -76,28 +75,6 @@ data_wide_open <- data %>% tidyr::pivot_wider(
 
 
 
-# rollingmeans <- seq_along(rolling_window_widths_d) %>% purrr::map_dfc(
-#   ~ {
-#     moving_avgs <- data_wide_open %>% dplyr::select(-date) %>% zoo::rollapply(
-#       data = .,
-#       width = rolling_window_widths_d[.x],
-#       FUN = mean,
-#       na.rm = TRUE,
-#       align = "right",
-#       by.column = TRUE,
-#       fill = NA
-#     ) %>% tibble::as_tibble()
-#
-#     colnames(moving_avgs) <- paste0(
-#       colnames(data_wide_open %>% dplyr::select(-date)),
-#       "_MOVING_AVG_OPEN_",
-#       rolling_window_widths_d[.x],
-#       "_D"
-#     )
-#
-#     moving_avgs
-#   }
-# )
 
 # calculate moving averages
 data_wide_open <- data_wide_open %>% bind_cols(
@@ -124,10 +101,63 @@ data_wide_open <- data_wide_open %>% bind_cols(
       moving_avgs
     }
   )
+) %>% dplyr::mutate(
+  # calculate daily percentage changes
+  dplyr::across(
+    .cols = (!"date" & !tidyselect::contains("_MOVING_")),
+    .fns = ~ (.x / lag(.x, k = 1)) - 1,
+    .names = "{.col}_01DPC"
+  )
+) %>% dplyr::mutate(
+  # calculate cumulative returns
+  dplyr::across(
+    .cols = (!"date" & !tidyselect::contains("_MOVING_") & !tidyselect::contains("DPC")),
+    .fns = ~ (.x / .x[1]),
+    .names = "{.col}_CUMRET"
+  )
 )
 
 
 
+
+
+# pivot opens to long
+data_long_open <- data_wide_open %>% tidyr::pivot_longer(
+  cols = -date,
+  names_to = "variable",
+  values_to = "value"
+) %>% dplyr::mutate(
+  symbol = stringr::str_split(
+    variable,
+    pattern = "_"
+  ) %>% purrr::map_chr(~ .x[1])
+)
+
+
+
+variables_open <- colnames(data_wide_open) %>% stringr::str_split(
+  pattern = "_"
+) %>% purrr::map_chr(
+  ~ paste(.x[-1], collapse = "_")
+)
+
+variables_open[c(1, 2, 3, 4)] <- c("date", rep("open", 3))
+
+
+
+
+data_long_open <- data_long_open %>% dplyr::inner_join(
+  tidyr::tibble(
+    variable = colnames(data_wide_open),
+    new = variables_open
+  ),
+  by = "variable"
+) %>% dplyr::select(
+  date,
+  symbol,
+  variable = new,
+  value
+)
 
 
 
@@ -164,17 +194,6 @@ colnames(data_wide_open)
 
 colnames(data_wide_open)[-1]
 
-# pivot opens to long
-data_long_open <- data_wide_open %>% tidyr::pivot_longer(
-  cols = -date,
-  names_to = "variable",
-  values_to = "value"
-) %>% dplyr::mutate(
-  symbol = stringr::str_split(
-    variable,
-    pattern = "_"
-  ) %>% purrr::map_chr(~ .x[1])
-)
 
 
 # plot
@@ -210,4 +229,27 @@ data_wide_open %>% ggplot2::ggplot() +
       x = NVDA
     ),
     binwidth = 50
+  )
+
+
+data_wide_open %>% colnames
+
+data_wide_open %>% select((!"date" & !tidyselect::contains("_MOVING_")))
+
+data_wide_open$LHA.DE %>% lag(k = 1) %>% head
+data_wide_open$LHA.DE %>% head
+
+
+# boxplots
+data_long_open %>% ggplot2::ggplot() +
+  ggplot2::geom_boxplot(
+    ggplot2::aes(
+      x = symbol,
+      y = value,
+      fill = symbol
+    )
+  ) +
+  ggplot2::facet_wrap(
+    ~ variable,
+    scales = "free_y"
   )
