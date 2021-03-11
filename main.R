@@ -24,7 +24,7 @@ rolling_window_widths_d <- c(7, 20, 50, 200)
 
 # get stock prices -------------------------------------------------------------
 data <- tidyquant::tq_get(
-  c("LHA.DE", "NVDA", "INTC"),
+  c("LHA.DE", "NVDA", "INTC", "DHER.DE"),
   get = "stock.prices"
 )
 
